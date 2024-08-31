@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Snake Game</title>
+        <style>
+            body {
+                background-color: black;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+            canvas {
+                display: block;
+            }
+            #score {
+                color: white;
+                font-size: 100px;
+                position: absolute;
+                top: 30%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                opacity: 0.6;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="gameCanvas" width="1900" height="1100"></canvas>
+        <div id="score">0</div>
+
+        <script>
+            const CANVAS_BORDER_COLOR = 'black';
+            const CANVAS_BACKGROUND_COLOR = 'black';
+            const SNAKE_BODY_COLOR = 'pink';
+            const SNAKE_BORDER_COLOR = 'pink';
+            const SNAKE_PART_SIZE = 50;
+
+            let foodcolor = getRandomColor();
+            let dx = SNAKE_PART_SIZE;
+            let dy = 0;
+            let score = 0;
+            let foodX;
+            let foodY;
+
+            const gameCanvas = document.getElementById("gameCanvas");
+            const ctx = gameCanvas.getContext("2d");
+
+            let snake = [
+                {x: 200, y: 200},
+                {x: 150, y: 200},
+                {x: 100, y: 200},
+                {x: 50, y: 200},
+                {x: 0, y: 200}
+            ];
+
+            main();
+            createFood();
+            document.addEventListener("keydown", changeDirection);
+
+            function main() {
+                if (didGameEnd()) return;
+
+                setTimeout(function onTick() {
+                    clearCanvas();
+                    advanceSnake();
+                    drawFood();
+                    drawSnake();
+                    main();
+                }, 100);
+            }
+
+            function clearCanvas() {
+                ctx.fillStyle = CANVAS_BACKGROUND_COLOR;
+                ctx.strokeStyle = CANVAS_BORDER_COLOR;
+                ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+                ctx.strokeRect(0, 0, gameCanvas.width, gameCanvas.height);
+            }
+
+            function didGameEnd() {
+                for (let i = 4; i < snake.length; i++) {
+                    const didCollide = snake[i].x === snake[0].x && snake[i].y === snake[0].y;
+                    if (didCollide) return true;
+                }
+                return false;
+            }
+            
+            function advanceSnake() {
+                let head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+                if (head.x < 0)
+                    head.x = gameCanvas.width - SNAKE_PART_SIZE;
+                else if (head.x >= gameCanvas.width)
+                    head.x = 0;
+                if (head.y < 0)
+                    head.y = gameCanvas.height - SNAKE_PART_SIZE;
+                else if (head.y >= gameCanvas.height)
+                    head.y = 0;
+
+                snake.unshift(head);
+                console.log(`Snake Head: (${snake[0].x}, ${snake[0].y}), Food: (${foodX}, ${foodY})`);
+                const didEatFood = snake[0].x === foodX && snake[0].y === foodY;
+                if (didEatFood) {
+                    score += 1;
+                    document.getElementById('score').innerHTML = score; // Update the score element
+                    createFood();
+                } else {
+                    snake.pop();
+                }
+            }
+            
+            function randomTen(min, max) {
+                return Math.round((Math.random() * (max - min) + min) / SNAKE_PART_SIZE) * SNAKE_PART_SIZE;
+            }
+            function createFood() {
+                foodcolor = getRandomColor();
+                // Generate a random position for the food
+                foodX = randomTen(0, gameCanvas.width - SNAKE_PART_SIZE);
+                foodY = randomTen(0, gameCanvas.height - SNAKE_PART_SIZE);
+                
+                console.log(`Generated Food Position: (${foodX}, ${foodY})`);
+                // Check if the food is placed on the snake's body
+                snake.forEach(function isFoodOnSnake(part) {
+                    const foodIsOnSnake = part.x === foodX && part.y === foodY;
+                    if (foodIsOnSnake) {
+                        // If the food is on the snake, create new food
+                        createFood();
+                    }
+                });
+            }
+            
+            function getRandomColor() {
+                const letters = '0123456789ABCDEF';
+                let color = '#';
+                for (let i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+
+            
+            function drawFood() {
+                ctx.fillStyle = foodcolor;
+                ctx.strokeStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(foodX + SNAKE_PART_SIZE / 2, foodY + SNAKE_PART_SIZE / 2, SNAKE_PART_SIZE / 2, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            function drawSnake() {
+                snake.forEach(function(snakePart) {
+                    ctx.fillStyle = SNAKE_BODY_COLOR;
+                    ctx.strokeStyle = SNAKE_BORDER_COLOR;
+                    ctx.fillRect(snakePart.x, snakePart.y, SNAKE_PART_SIZE, SNAKE_PART_SIZE);
+                    ctx.strokeRect(snakePart.x, snakePart.y, SNAKE_PART_SIZE, SNAKE_PART_SIZE);
+                });
+            }
+
+            function changeDirection(event) {
+                const LEFT_KEY = 65;
+                const RIGHT_KEY = 68;
+                const UP_KEY = 87;
+                const DOWN_KEY = 83;
+
+                const keyPressed = event.keyCode;
+                const goingUp = dy === -SNAKE_PART_SIZE;
+                const goingDown = dy === SNAKE_PART_SIZE;
+                const goingRight = dx === SNAKE_PART_SIZE;
+                const goingLeft = dx === -SNAKE_PART_SIZE;
+
+                if (keyPressed === LEFT_KEY && !goingRight) {
+                    dx = -SNAKE_PART_SIZE;
+                    dy = 0;
+                }
+
+                if (keyPressed === UP_KEY && !goingDown) {
+                    dx = 0;
+                    dy = -SNAKE_PART_SIZE;
+                }
+
+                if (keyPressed === RIGHT_KEY && !goingLeft) {
+                    dx = SNAKE_PART_SIZE;
+                    dy = 0;
+                }
+
+                if (keyPressed === DOWN_KEY && !goingUp) {
+                    dx = 0;
+                    dy = SNAKE_PART_SIZE;
+                }
+            }
+        </script>
+    </body>
+</html>
